@@ -45,12 +45,12 @@
         private item;
 
         constructor() {
-            super("RemoteDebugging", "control.html", "control.css");
+            super("remoteDebugging", "control.html", "control.css");
             this._ready = false;
         }
 
         public getID(): string {
-            return "RemoteDebugging";
+            return "REMOTEDEBUGGER";
         }
 
         private _markForRefresh() {
@@ -69,8 +69,10 @@
         private _getTab(json: any): any {
             var find = null;
             json.forEach((item) => {
-                if (item.title.toLowerCase().indexOf("demo") != -1) {
+                console.log('checking tab ' + item.title);
+                if (item.title.toLowerCase().indexOf("vorlon") != -1) {
                     find = item;
+                    console.log('tab match ' + item.title);
                 }
             });
             return find;
@@ -92,14 +94,18 @@
             if (receivedObject && receivedObject.type) {
                 switch (receivedObject.type) {
                     case "getJSON":
+                        console.log('trying to get json metadata from browser');
                         xhr.open("GET", "http://localhost:9222/json", true);
                         xhr.withCredentials = true;
                         xhr.onreadystatechange = () => {
                             if (xhr.readyState == 4 && xhr.status == 200) {
+                                console.log('json call success ' + xhr.responseText);
                                 json = JSON.parse(xhr.responseText);
                                 this.item = this._getTab(json);
 
                                 Core.Messenger.sendRealtimeMessage(this.getID(), this._packageJson(), RuntimeSide.Client);
+                            } else {
+                                console.log('json call failed ' + xhr.readyState + '/' + xhr.status + '/' + xhr.responseText);
                             }
                         }
                         xhr.send();
@@ -127,10 +133,14 @@
         }
 
         private _connectWithClient(receivedObject: any): void {
+            console.log('received json metadata ' + receivedObject.json);
             var json = JSON.parse(receivedObject.json);
             var url: string = "";
+
+
             if (json && json.webSocketDebuggerUrl) {
                 url = json.webSocketDebuggerUrl;
+                console.log('opening websocket to ' + url);
                 this._socket = new WebSocket(url);
                 this._socket.onopen = () => {
                     if (this._socket.readyState === WebSocket.OPEN) {
@@ -139,24 +149,29 @@
                             "method": "Debugger.enable",
                             "id": this._index++
                         };
+                        console.log('send Debugger.enable');
                         this._socket.send(JSON.stringify(json));
                     }
                 };
 
-                this._socket.onerror = () => {
+                this._socket.onerror = (err) => {
+                    console.error('error from rdp websocket', err);
                 };
 
                 this._socket.onmessage = (message) => {
                     var command = {};
                     if (message && message.data) {
                         var data = JSON.parse(message.data);
+                        console.log('received ' + data.method, data);
                         if (data.method && data.method === "Debugger.scriptParsed") {
+                            //console.log('script parsed ', data);
                             this._scriptParsed(data);
                         }
                         if (data && data.result) {
                             var result = data.result;
                             if (result.scriptSource) {
                                 var script: ScriptParsed = this._scriptsParsed[data.id];
+
                                 script.scriptSource = result.scriptSource;
                                 if (!this._timeout && script.startLine == 3)
                                     this._timeout = setTimeout(() => {
@@ -172,6 +187,7 @@
                                     "id": this._index++,
                                     "method": "Debugger.resume",
                                 }
+                                console.log('send Debugger.resume');
                                 this._socket.send(JSON.stringify(command));
                             }
                         }
@@ -191,6 +207,7 @@
                 "params": { "scriptId": data.params.scriptId.toString() }
             };
             this._scriptsParsed[id] = data.params;
+            console.log('send Debugger.getScriptSource');
             this._socket.send(JSON.stringify(command));
         }
 
@@ -208,6 +225,7 @@
                 "method": "Debugger.setBreakpoint",
                 "params": { "location": location }
             };
+            console.log('send Debugger.setBreakpoint');
             this._socket.send(JSON.stringify(command));
         }
 
@@ -223,6 +241,7 @@
                 "method": "Debugger.evaluateOnCallFrame",
                 "params": evaluateCallFrame
             };
+            console.log('send Debugger.evaluateOnCallFrame');
             this._socket.send(JSON.stringify(command));
         }
 
