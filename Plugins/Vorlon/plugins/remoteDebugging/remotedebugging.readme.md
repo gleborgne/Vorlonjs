@@ -4,7 +4,7 @@ Remote debugging plugin
 
 ## Prerequisites
 
-First of all, you need to install [Chrome Canary](https://www.google.fr/chrome/browser/canary.html) after that the Chrome Canary needs to be started with `--remote-debugging-port=9222` and `--disable-web-security` parameter. For example:
+First of all, you need to install Chrome and start it with `--remote-debugging-port=9222` and `--disable-web-security` parameter. For example:
 
 >chrome.exe --remote-debugging-port=9222 --disable-web-security
 
