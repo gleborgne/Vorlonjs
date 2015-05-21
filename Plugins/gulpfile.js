@@ -65,8 +65,8 @@ gulp.task('scripts', ['typescript-to-js'], function () {
             './**/vorlon.domExplorer.js',
             './**/vorlon.modernizrReport.js',
             './**/objectExplorer/vorlon.objectExplorer.js',
-            './**/sample/sample.js'
-            './**/vorlon.sourceDebugger.js'
+            './**/sample/sample.js',
+            './**/remoteDebugging/vorlon.remoteDebugging.js'
         ])
         .pipe(rename(function (path) {
                 path.extname = ".min.js";
