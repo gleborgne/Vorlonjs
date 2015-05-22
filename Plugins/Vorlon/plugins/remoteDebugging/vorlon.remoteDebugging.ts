@@ -68,9 +68,10 @@
 
         private _getTab(json: any): any {
             var find = null;
+            var searchTab = document.title;
             json.forEach((item) => {
                 console.log('checking tab ' + item.title);
-                if (item.title.toLowerCase().indexOf("vorlon") != -1) {
+                if (item.title.indexOf(searchTab) != -1) {
                     find = item;
                     console.log('tab match ' + item.title);
                 }
@@ -119,19 +120,68 @@
         private _socket: any;
         private _index: number;
         private _protocol;
-        private _scriptsParsed: any;
+        private _scriptsParsed: Array<any>;
         private _timeout;
+        private _dashboardDiv: HTMLDivElement;
+        private _containerDiv: HTMLElement;
+        private _selectScript: HTMLOListElement;
+        private _code: HTMLDivElement;
+
         public startDashboardSide(div: HTMLDivElement = null): void {
-            Core.Messenger.sendRealtimeMessage(this.getID(), {
-                type: "getJSON",
-                order: null
-            }, RuntimeSide.Dashboard);
-            this._index = 0;
-            this._scriptsParsed = {};
-            this._timeout = null;
-            this._ready = true;
+            this._dashboardDiv = div;
+
+            this._insertHtmlContentAsync(this._dashboardDiv,(filledDiv) => {
+                this._containerDiv = filledDiv;
+
+                this._code = <HTMLDivElement>this._containerDiv.querySelector("#code");
+
+                this._selectScript = <HTMLOListElement>this._containerDiv.querySelector("#listScripts");
+                this._selectScript.innerHTML = "";
+                //this._selectScript.appendChild(document.createElement('option'));
+                /*this._selectScript.addEventListener("change",(elt: any) => {
+                    this._code.innerHTML = "";
+                    $("option:selected", this._selectScript).each(function () {
+                        _that._displayScript($(this)[0].id);
+                    });
+                });*/
+                Core.Messenger.sendRealtimeMessage(this.getID(), {
+                    type: "getJSON",
+                    order: null
+                }, RuntimeSide.Dashboard);
+
+                var splitter = $('.remote-debugging-container').split({
+                    orientation: 'vertical',
+                    limit: 200,
+                    position: '70%'
+                });
+                splitter.refresh();
+                this._index = 0;
+                this._scriptsParsed = [];
+                this._timeout = null;
+                this._ready = true;
+            });
         }
 
+        private _displayScript(id: number): void {
+            this._scriptsParsed.forEach((script) => {
+                if (script.scriptId == id) {
+                    /*script.scriptSource.split('\n').forEach((line) => {
+                        var ligne = document.createElement("div");
+                        ligne.innerHTML = line;
+                        this._code.appendChild(ligne);
+                    });*/
+                    this._code.innerHTML = script.scriptSource;
+                }
+            });
+        }
+
+        private _empty(): void {
+            this._selectScript.innerHTML = "";
+            this._scriptsParsed = [];
+            this._timeout = null;
+        }
+
+        // List of all commands (https://developer.chrome.com/devtools/docs/protocol/1.1/index)
         private _connectWithClient(receivedObject: any): void {
             console.log('received json metadata ' + receivedObject.json);
             var json = JSON.parse(receivedObject.json);
@@ -165,7 +215,12 @@
                         console.log('received ' + data.method, data);
                         if (data.method && data.method === "Debugger.scriptParsed") {
                             //console.log('script parsed ', data);
-                            this._scriptParsed(data);
+                            if (data.params.url.indexOf("extensions::unload_event") == -1) {
+                                this._scriptParsed(data);
+                            }
+                            else {
+                                this._empty();
+                            }
                         }
                         if (data && data.result) {
                             var result = data.result;
@@ -175,7 +230,8 @@
                                 script.scriptSource = result.scriptSource;
                                 if (!this._timeout && script.startLine == 3)
                                     this._timeout = setTimeout(() => {
-                                        this._displayScript(script);
+                                        this._displayScript(+script.scriptId);
+                                        this._addBreakpoint(script);
                                     }, 1000);
                             }
                             else if (result.breakpointId) {
@@ -200,6 +256,31 @@
         }
 
         private _scriptParsed(data: any): void {
+            var li: HTMLLIElement = document.createElement('li');
+            var name: string = "";
+            var url: string = data.params.url;
+            var tmp = url.substring(0, url.lastIndexOf('.js'));
+            if (tmp !== "") {
+                name = tmp.substring(tmp.lastIndexOf('/') + 1, tmp.length) + ".js";
+            }
+            else {
+                name = url.substring(url.lastIndexOf('/') + 1, url.length);
+            }
+            li.id = data.params.scriptId;
+            li.innerHTML = name;
+
+            var _that = this;
+            li.addEventListener("click", function (elt) {
+                var selected: any = _that._selectScript.querySelector('.selected');
+                if (selected) {
+                    selected.classList.remove('selected');
+                }
+                var click = $(this);
+                Tools.AddClass(click[0], 'selected');
+                _that._displayScript(click[0].id);
+            });
+            this._selectScript.appendChild(li);
+
             var id = this._index++;
             var command = {
                 "id": id,
@@ -211,7 +292,7 @@
             this._socket.send(JSON.stringify(command));
         }
 
-        private _displayScript(script: ScriptParsed): void {
+        private _addBreakpoint(script: ScriptParsed): void {
             this._setBreakPoint(script);
         }
 
