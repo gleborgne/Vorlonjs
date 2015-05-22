@@ -2,14 +2,26 @@
     height: 100%;
     width: 100%;
     overflow: hidden !important;
+    display: flex;
+    flex-flow: row nowrap;
 }
 
 .plugin-remotedebugger .panel-left,
 .plugin-remotedebugger .panel-right {
     height: 100%;
+    overflow-y: auto;
 }
 
-    .plugin-remotedebugger .panel-left div#code {
+.plugin-remotedebugger .panel-left {
+    width: 20%;
+    border-right: 1px solid black;
+}
+
+.plugin-remotedebugger .panel-right {
+    width: 80%;
+}
+
+    .plugin-remotedebugger .panel-right div#code {
         height: 100%;
         width: 100%;
         padding-left: 10px;
@@ -25,6 +37,6 @@
         font-weight: 500;
     }
 
-    .plugin-remotedebugger .remote-debugging-container .list-view-wrapper.panel-left ol li.selected {
-        text-decoration: underline;
-    }
+        .plugin-remotedebugger .remote-debugging-container .list-view-wrapper.panel-left ol li.selected {
+            text-decoration: underline;
+        }

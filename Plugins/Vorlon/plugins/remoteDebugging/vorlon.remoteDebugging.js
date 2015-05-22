@@ -105,12 +105,12 @@ var VORLON;
                     type: "getJSON",
                     order: null
                 }, VORLON.RuntimeSide.Dashboard);
-                var splitter = $('.remote-debugging-container').split({
-                    orientation: 'vertical',
-                    limit: 200,
-                    position: '70%'
-                });
-                splitter.refresh();
+                //var splitter = $('.remote-debugging-container').split({
+                //    orientation: 'vertical',
+                //    limit: 200,
+                //    position: '70%'
+                //});
+                //splitter.refresh();
                 _this._index = 0;
                 _this._scriptsParsed = [];
                 _this._timeout = null;
