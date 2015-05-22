@@ -149,12 +149,12 @@
                     order: null
                 }, RuntimeSide.Dashboard);
 
-                var splitter = $('.remote-debugging-container').split({
-                    orientation: 'vertical',
-                    limit: 200,
-                    position: '70%'
-                });
-                splitter.refresh();
+                //var splitter = $('.remote-debugging-container').split({
+                //    orientation: 'vertical',
+                //    limit: 200,
+                //    position: '70%'
+                //});
+                //splitter.refresh();
                 this._index = 0;
                 this._scriptsParsed = [];
                 this._timeout = null;
