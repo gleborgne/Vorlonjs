@@ -1,12 +1,23 @@
 ﻿<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <script src="Entities/Location.js"></script>
-    <script src="Entities/ScriptParsed.js"></script>
     <title></title>
+    <link href="control.css" rel="stylesheet" />
 </head>
 <body>
-    <div id="SrcDebuggerContainer" class="src-debugger-container">
+    <div id="RemoteDebuggingContainer" class="remote-debugging-container">
+        <div class="list-view-wrapper panel-left">
+            List of scripts: 
+            <!--<select name="script" id="listScripts">
+            </select>-->
+            <ol id="listScripts">
+
+            </ol>
+        </div>
+        <div class="content-view-wrapper panel-left">
+            <div id="code">
+            </div>
+        </div>
     </div>
 </body>
 </html>

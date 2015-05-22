@@ -9,3 +9,7 @@ sync.bat
 bin/
 GLE idées.txt
 sync.bat
+Plugins/vorlon.remoteDebugging.min.js
+Plugins/vorlon.domExplorer.min.js
+Plugins/vorlon.objectExplorer.min.js
+Server/Server.njsproj

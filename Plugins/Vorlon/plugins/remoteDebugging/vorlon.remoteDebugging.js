@@ -21,11 +21,11 @@ var VORLON;
     var remoteDebugging = (function (_super) {
         __extends(remoteDebugging, _super);
         function remoteDebugging() {
-            _super.call(this, "RemoteDebugging", "control.html", "control.css");
+            _super.call(this, "remoteDebugging", "control.html", "control.css");
             this._ready = false;
         }
         remoteDebugging.prototype.getID = function () {
-            return "RemoteDebugging";
+            return "REMOTEDEBUGGER";
         };
         remoteDebugging.prototype._markForRefresh = function () {
             var _this = this;
@@ -40,9 +40,12 @@ var VORLON;
         };
         remoteDebugging.prototype._getTab = function (json) {
             var find = null;
+            var searchTab = document.title;
             json.forEach(function (item) {
-                if (item.title.toLowerCase().indexOf("demo") != -1) {
+                console.log('checking tab ' + item.title);
+                if (item.title.indexOf(searchTab) != -1) {
                     find = item;
+                    console.log('tab match ' + item.title);
                 }
             });
             return find;
@@ -62,13 +65,18 @@ var VORLON;
             if (receivedObject && receivedObject.type) {
                 switch (receivedObject.type) {
                     case "getJSON":
+                        console.log('trying to get json metadata from browser');
                         xhr.open("GET", "http://localhost:9222/json", true);
                         xhr.withCredentials = true;
                         xhr.onreadystatechange = function () {
                             if (xhr.readyState == 4 && xhr.status == 200) {
+                                console.log('json call success ' + xhr.responseText);
                                 json = JSON.parse(xhr.responseText);
                                 _this.item = _this._getTab(json);
                                 VORLON.Core.Messenger.sendRealtimeMessage(_this.getID(), _this._packageJson(), VORLON.RuntimeSide.Client);
+                            }
+                            else {
+                                console.log('json call failed ' + xhr.readyState + '/' + xhr.status + '/' + xhr.responseText);
                             }
                         };
                         xhr.send();
@@ -78,22 +86,64 @@ var VORLON;
             }
         };
         remoteDebugging.prototype.startDashboardSide = function (div) {
+            var _this = this;
             if (div === void 0) { div = null; }
-            VORLON.Core.Messenger.sendRealtimeMessage(this.getID(), {
-                type: "getJSON",
-                order: null
-            }, VORLON.RuntimeSide.Dashboard);
-            this._index = 0;
-            this._scriptsParsed = {};
-            this._timeout = null;
-            this._ready = true;
+            this._dashboardDiv = div;
+            this._insertHtmlContentAsync(this._dashboardDiv, function (filledDiv) {
+                _this._containerDiv = filledDiv;
+                _this._code = _this._containerDiv.querySelector("#code");
+                _this._selectScript = _this._containerDiv.querySelector("#listScripts");
+                _this._selectScript.innerHTML = "";
+                //this._selectScript.appendChild(document.createElement('option'));
+                /*this._selectScript.addEventListener("change",(elt: any) => {
+                    this._code.innerHTML = "";
+                    $("option:selected", this._selectScript).each(function () {
+                        _that._displayScript($(this)[0].id);
+                    });
+                });*/
+                VORLON.Core.Messenger.sendRealtimeMessage(_this.getID(), {
+                    type: "getJSON",
+                    order: null
+                }, VORLON.RuntimeSide.Dashboard);
+                var splitter = $('.remote-debugging-container').split({
+                    orientation: 'vertical',
+                    limit: 200,
+                    position: '70%'
+                });
+                splitter.refresh();
+                _this._index = 0;
+                _this._scriptsParsed = [];
+                _this._timeout = null;
+                _this._ready = true;
+            });
         };
+        remoteDebugging.prototype._displayScript = function (id) {
+            var _this = this;
+            this._scriptsParsed.forEach(function (script) {
+                if (script.scriptId == id) {
+                    /*script.scriptSource.split('\n').forEach((line) => {
+                        var ligne = document.createElement("div");
+                        ligne.innerHTML = line;
+                        this._code.appendChild(ligne);
+                    });*/
+                    _this._code.innerHTML = script.scriptSource;
+                }
+            });
+        };
+        remoteDebugging.prototype._empty = function () {
+            this._selectScript.innerHTML = "";
+            this._scriptsParsed = [];
+            this._timeout = null;
+        };
+        // List of all commands (https://developer.chrome.com/devtools/docs/protocol/1.1/index)
         remoteDebugging.prototype._connectWithClient = function (receivedObject) {
             var _this = this;
+            console.log('received json metadata ' + receivedObject.json);
             var json = JSON.parse(receivedObject.json);
             var url = "";
             if (json && json.webSocketDebuggerUrl) {
                 url = json.webSocketDebuggerUrl;
+                console.log('opening websocket to ' + url);
                 this._socket = new WebSocket(url);
                 this._socket.onopen = function () {
                     if (_this._socket.readyState === WebSocket.OPEN) {
@@ -101,17 +151,26 @@ var VORLON;
                             "method": "Debugger.enable",
                             "id": _this._index++
                         };
+                        console.log('send Debugger.enable');
                         _this._socket.send(JSON.stringify(json));
                     }
                 };
-                this._socket.onerror = function () {
+                this._socket.onerror = function (err) {
+                    console.error('error from rdp websocket', err);
                 };
                 this._socket.onmessage = function (message) {
                     var command = {};
                     if (message && message.data) {
                         var data = JSON.parse(message.data);
+                        console.log('received ' + data.method, data);
                         if (data.method && data.method === "Debugger.scriptParsed") {
-                            _this._scriptParsed(data);
+                            //console.log('script parsed ', data);
+                            if (data.params.url.indexOf("extensions::unload_event") == -1) {
+                                _this._scriptParsed(data);
+                            }
+                            else {
+                                _this._empty();
+                            }
                         }
                         if (data && data.result) {
                             var result = data.result;
@@ -120,7 +179,8 @@ var VORLON;
                                 script.scriptSource = result.scriptSource;
                                 if (!_this._timeout && script.startLine == 3)
                                     _this._timeout = setTimeout(function () {
-                                        _this._displayScript(script);
+                                        _this._displayScript(+script.scriptId);
+                                        _this._addBreakpoint(script);
                                     }, 1000);
                             }
                             else if (result.breakpointId) {
@@ -132,6 +192,7 @@ var VORLON;
                                     "id": _this._index++,
                                     "method": "Debugger.resume",
                                 };
+                                console.log('send Debugger.resume');
                                 _this._socket.send(JSON.stringify(command));
                             }
                         }
@@ -143,6 +204,29 @@ var VORLON;
             }
         };
         remoteDebugging.prototype._scriptParsed = function (data) {
+            var li = document.createElement('li');
+            var name = "";
+            var url = data.params.url;
+            var tmp = url.substring(0, url.lastIndexOf('.js'));
+            if (tmp !== "") {
+                name = tmp.substring(tmp.lastIndexOf('/') + 1, tmp.length) + ".js";
+            }
+            else {
+                name = url.substring(url.lastIndexOf('/') + 1, url.length);
+            }
+            li.id = data.params.scriptId;
+            li.innerHTML = name;
+            var _that = this;
+            li.addEventListener("click", function (elt) {
+                var selected = _that._selectScript.querySelector('.selected');
+                if (selected) {
+                    selected.classList.remove('selected');
+                }
+                var click = $(this);
+                VORLON.Tools.AddClass(click[0], 'selected');
+                _that._displayScript(click[0].id);
+            });
+            this._selectScript.appendChild(li);
             var id = this._index++;
             var command = {
                 "id": id,
@@ -150,9 +234,10 @@ var VORLON;
                 "params": { "scriptId": data.params.scriptId.toString() }
             };
             this._scriptsParsed[id] = data.params;
+            console.log('send Debugger.getScriptSource');
             this._socket.send(JSON.stringify(command));
         };
-        remoteDebugging.prototype._displayScript = function (script) {
+        remoteDebugging.prototype._addBreakpoint = function (script) {
             this._setBreakPoint(script);
         };
         remoteDebugging.prototype._setBreakPoint = function (script) {
@@ -165,6 +250,7 @@ var VORLON;
                 "method": "Debugger.setBreakpoint",
                 "params": { "location": location }
             };
+            console.log('send Debugger.setBreakpoint');
             this._socket.send(JSON.stringify(command));
         };
         remoteDebugging.prototype._debuggerPaused = function (data) {
@@ -179,6 +265,7 @@ var VORLON;
                 "method": "Debugger.evaluateOnCallFrame",
                 "params": evaluateCallFrame
             };
+            console.log('send Debugger.evaluateOnCallFrame');
             this._socket.send(JSON.stringify(command));
         };
         remoteDebugging.prototype.onRealtimeMessageReceivedFromClientSide = function (receivedObject) {
