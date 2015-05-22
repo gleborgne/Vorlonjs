@@ -1,0 +1,30 @@
+﻿.plugin-remotedebugger .remote-debugging-container {
+    height: 100%;
+    width: 100%;
+    overflow: hidden !important;
+}
+
+.plugin-remotedebugger .panel-left,
+.plugin-remotedebugger .panel-right {
+    height: 100%;
+}
+
+    .plugin-remotedebugger .panel-left div#code {
+        height: 100%;
+        width: 100%;
+        padding-left: 10px;
+        word-wrap: break-word;
+    }
+
+.plugin-remotedebugger .remote-debugging-container .list-view-wrapper.panel-left ol {
+    padding-left: 30px;
+}
+
+    .plugin-remotedebugger .remote-debugging-container .list-view-wrapper.panel-left ol li {
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .plugin-remotedebugger .remote-debugging-container .list-view-wrapper.panel-left ol li.selected {
+        text-decoration: underline;
+    }

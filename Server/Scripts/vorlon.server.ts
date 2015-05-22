@@ -198,13 +198,16 @@ export module VORLON {
                     
                     for(var pluginid = 0; pluginid < catalog.plugins.length; pluginid++){
                         var plugin = catalog.plugins[pluginid];
-                        
-                        //Read Vorlon.js file
-                        if(ismin){
-                            vorlonpluginfiles += fs.readFileSync(path.join(__dirname, "../public/vorlon/plugins/" + plugin.foldername + "/vorlon." + plugin.foldername + ".min.js"));
-                        }
-                        else{
-                            vorlonpluginfiles += fs.readFileSync(path.join(__dirname, "../public/vorlon/plugins/" + plugin.foldername + "/vorlon." + plugin.foldername + ".js"));
+                        if (!plugin || !plugin.foldername){
+                            console.error('invalid plugin definition', plugin);
+                        }else{
+                            //Read Vorlon.js file
+                            if(ismin){
+                                vorlonpluginfiles += fs.readFileSync(path.join(__dirname, "../public/vorlon/plugins/" + plugin.foldername + "/vorlon." + plugin.foldername + ".min.js"));
+                            }
+                            else{
+                                vorlonpluginfiles += fs.readFileSync(path.join(__dirname, "../public/vorlon/plugins/" + plugin.foldername + "/vorlon." + plugin.foldername + ".js"));
+                            }
                         }
                     }
                     
