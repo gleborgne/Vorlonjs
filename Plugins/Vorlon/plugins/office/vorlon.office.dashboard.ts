@@ -1,6 +1,7 @@
 ///<reference path='vorlon.office.tools.ts' />
 ///<reference path='vorlon.office.document.ts' />
 ///<reference path='vorlon.office.outlook.ts' />
+///<reference path='vorlon.office.powerpoint.ts' />
 ///<reference path='../../vorlon.dashboardPlugin.ts' />
 var $: any;
 
@@ -11,11 +12,15 @@ module VORLON {
         private _treeDiv: HTMLDivElement;
         private _filledDiv: HTMLDivElement;
         private mailFunctions: OfficeOutlook;
+        private pptxFunctions: OfficePowerPoint;
         private documentFunctions: OfficeDocument;
         public refreshButton: Element;
         private treeviewwrapper: HTMLDivElement;
         private officetypeapp: HTMLSpanElement
-          
+        private officetype: any;
+        private officePropertiesTitle : HTMLElement;
+        private officePropertiesSection : HTMLDivElement;
+
         //Do any setup you need, call super to configure
         //the plugin with html and css for the dashboard
         constructor() {
@@ -24,6 +29,8 @@ module VORLON {
             this._ready = true;
             this.mailFunctions = new OfficeOutlook(this);
             this.documentFunctions = new OfficeDocument(this);
+            this.pptxFunctions = new OfficePowerPoint(this);
+
         }
 
         //Return unique id for your plugin
@@ -44,6 +51,8 @@ module VORLON {
                 this.refreshButton = this._filledDiv.querySelector('x-action[event="refresh"]');
                 this.treeviewwrapper = <HTMLDivElement>this._filledDiv.querySelector('.tree-view-wrapper');
                 this.officetypeapp = <HTMLSpanElement>this._filledDiv.querySelector('#office-type-app');
+                this.officePropertiesTitle = <HTMLElement>this._filledDiv.querySelector("#office-properties-title");
+                this.officePropertiesSection = <HTMLDivElement>this._filledDiv.querySelector("#office-properties");
                 this.clearTreeview();
 
                 this._filledDiv.addEventListener('refresh', () => {
@@ -63,16 +72,15 @@ module VORLON {
                     });
                 });
 
+                
+                // $("#accordion h3", this._filledDiv).click((elt) => {
+                //     $('.visible', elt.target.parentElement).removeClass('visible');
 
-                $("#accordion h3", this._filledDiv).click((elt) => {
-                    $('.visible', elt.target.parentElement).removeClass('visible');
+                //     $('#' + elt.target.className, elt.target.parentElement).addClass('visible');
 
-                    $('#' + elt.target.className, elt.target.parentElement).addClass('visible');
+                //     elt.target.classList.add('visible');
+                // });
 
-                    elt.target.classList.add('visible');
-                });
-
-                this.sendToClient({ type: "query", name: "Office" });
                 this.sendToClient({ type: 'officetype' })
             })
         }
@@ -84,8 +92,10 @@ module VORLON {
             if (remoteOffice.name === "Office") {
                 this.sendToClient({ type: "query", name: "OfficeExt" });
 
-                if (OfficeTools.IsOutlook()) {
+                if (this.officetype.officeType == "Outlook") {
                     this.mailFunctions.execute();
+                } else if (this.officetype.officeType == "PowerPoint") {
+                    this.pptxFunctions.execute();
                 } else {
                     this.sendToClient({ type: "query", name: "OfficeExtension" });
                     this.sendToClient({ type: "query", name: "Excel" });
@@ -123,7 +133,7 @@ module VORLON {
             elt.append('DIV', 'expandable expanded', (zone) => {
                 var btn: FluentDOM;
                 zone.attr("id", currentObj.fullpath);
-                
+
                 // create the div containing both sigle (+ or -) and the label
                 zone.append('DIV', 'expand', container => {
                     btn = container.createChild("SPAN", "expand-btn").text("-")
@@ -141,7 +151,7 @@ module VORLON {
 
 
                 });
-                    
+
                 // add the childs
                 if (currentObj.properties !== undefined) {
                     zone.append("DIV", "expand-content", (itemsContainer) => {
@@ -181,16 +191,20 @@ module VORLON {
             } else if (r.type === 'function') {
                 OfficeTools.ShowFunctionResult(r)
             } else if (r.type === 'officetype') {
-                var officeType = OfficeTools.GetOfficeType(r.value.officeType)
-                this.treeviewwrapper.style.background = officeType.background;
-                this.officetypeapp.innerHTML = officeType.officeType + " " + officeType.version;
+                this.officetype = OfficeTools.GetOfficeType(r.value.officeType)
+                this.treeviewwrapper.style.background = this.officetype.background;
+                var officeTypeText = this.officetype.officeType ? this.officetype.officeType : "Office";
+                officeTypeText += this.officetype.version ? officeTypeText + " " + this.officetype.version : "";
+                this.officetypeapp.innerHTML = officeTypeText;
+                this.sendToClient({ type: "query", name: "Office" });
+
             } else if (r.type === 'error') {
                 OfficeTools.ShowFunctionResult(r)
             }
         }
 
     }
-    
+
     //Register the plugin with vorlon core
     Core.RegisterDashboardPlugin(new OfficeDashboard());
 }

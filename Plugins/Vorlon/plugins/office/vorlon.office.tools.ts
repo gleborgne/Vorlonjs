@@ -11,6 +11,7 @@ module VORLON {
 
 
 
+
         public static AddTreeFunction(treeCategory: string, functionName: string): FluentDOM {
 
             if (document.getElementById(treeCategory) === null || document.getElementById(treeCategory) === undefined) {
@@ -25,16 +26,16 @@ module VORLON {
         }
 
         private static _ClearPropertiesAndResults() {
-            var propertiesDiv = <HTMLDivElement>document.querySelector('#office-results');
+            // var propertiesDiv = <HTMLDivElement>document.querySelector('#office-results');
 
-            if (propertiesDiv !== undefined && propertiesDiv !== null) {
-                while (propertiesDiv.hasChildNodes()) {
-                    propertiesDiv.removeChild(propertiesDiv.lastChild);
-                }
+            // if (propertiesDiv !== undefined && propertiesDiv !== null) {
+            //     while (propertiesDiv.hasChildNodes()) {
+            //         propertiesDiv.removeChild(propertiesDiv.lastChild);
+            //     }
 
-            }
+            // }
 
-            propertiesDiv = <HTMLDivElement>document.querySelector('#office-properties');
+            var propertiesDiv = <HTMLDivElement>document.querySelector('#office-properties');
 
             if (propertiesDiv !== undefined && propertiesDiv !== null) {
                 while (propertiesDiv.hasChildNodes()) {
@@ -55,7 +56,7 @@ module VORLON {
             if (sets.excelapi) {
                 return { officeType: "Excel", version: sets.excelapi, background: "#227447" }
             }
-            if (sets.pdffile && !sets.wordapi) {
+            if (!sets.excelapi && !sets.wordapi) {
                 return { officeType: "PowerPoint", version: sets.pdf, background: "#B7472A" }
             }
             if (sets.project) {
@@ -67,23 +68,32 @@ module VORLON {
         }
 
         public static ShowFunctionResult(r: any) {
-            var propertiesDiv = document.querySelector('#office-results');
 
-            if (propertiesDiv !== undefined && propertiesDiv !== null) {
-                while (propertiesDiv.hasChildNodes()) {
-                    propertiesDiv.removeChild(propertiesDiv.lastChild);
+            if (r.value !== undefined && r.value !== null)
+                r.value = JSON.parse(r.value);
+            var jsonValue = JSON.stringify(r.value, undefined, 4);
+
+            var propertiesDiv = document.querySelector('#office-properties');
+            var propValues = document.querySelector('#office-results-values');
+
+            if (propValues !== undefined && propValues !== null) {
+                while (propValues.hasChildNodes()) {
+                    propValues.removeChild(propValues.lastChild);
                 }
+            } else {
+                propValues = document.createElement('DIV');
+                propValues.className = 'office-results-values';
+                propValues.id = 'office-results-values';
+                propertiesDiv.appendChild(propValues);
             }
-            var zone = new VORLON.FluentDOM('DIV', 'office-results-values', propertiesDiv);
 
-            zone.append('pre', 'results', container => {
-                if (r.value !== undefined && r.value !== null)
-                    r.value = JSON.parse(r.value);
+            var container = document.createElement('pre');
+            container.className = 'results';
+            container.innerHTML = OfficeTools.FormatJson(jsonValue);
+            
+            
+            propValues.appendChild(container);
 
-                var jsonValue = JSON.stringify(r.value, undefined, 4);
-
-                container.html(OfficeTools.FormatJson(jsonValue));
-            });
         }
 
 
@@ -112,6 +122,8 @@ module VORLON {
             VORLON.OfficeTools._ClearPropertiesAndResults();
 
             var propertiesDiv = <HTMLDivElement>document.querySelector('#office-properties');
+            var titleDive = <HTMLDivElement>document.querySelector('#office-properties-title');
+            titleDive.innerHTML = "Function";
 
             var zone = new FluentDOM('DIV', 'office-properties-values', propertiesDiv);
 
@@ -146,6 +158,8 @@ module VORLON {
             VORLON.OfficeTools._ClearPropertiesAndResults();
 
             var propertiesDiv = <HTMLDivElement>document.querySelector('#office-properties');
+            var titleDive = <HTMLDivElement>document.querySelector('#office-properties-title');
+            titleDive.innerHTML = "Property";
 
             var zone = new FluentDOM('DIV', 'office-properties-values', propertiesDiv);
 
@@ -178,7 +192,7 @@ module VORLON {
             }
 
             var itemBody = document.getElementById(parentTreeCategory).children[1];
-       
+
             // root of all
             var elt = new FluentDOM('DIV', 'objdescriptor', itemBody);
 
@@ -186,7 +200,7 @@ module VORLON {
             elt.append('DIV', 'expandable expanded', (zone) => {
                 var btn: FluentDOM;
                 zone.attr("id", parentTreeCategory + "." + category);
-                
+
                 // create the div containing both sigle (+ or -) and the label
                 zone.append('DIV', 'expand', container => {
                     btn = container.createChild("SPAN", "expand-btn").text("-")
